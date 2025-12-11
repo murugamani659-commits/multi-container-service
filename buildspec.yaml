@@ -8,7 +8,7 @@ phases:
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+      - aws ecr get-login-password --region ap-south-2 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com
 
       # Retrieve SSH Key securely
       - echo "Retrieving SSH Key..."
@@ -22,13 +22,13 @@ phases:
       - mvn clean package -DskipTests
       - echo Building Docker Image...
       - docker build -t $IMAGE_REPO_NAME:latest .
-      - docker tag $IMAGE_REPO_NAME:latest $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$IMAGE_REPO_NAME:latest
+      - docker tag $IMAGE_REPO_NAME:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_NAME:latest
 
   post_build:
     commands:
       - echo Pushing Image to ECR...
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$IMAGE_REPO_NAME:latest
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_NAME:latest
       - echo "Deploying to EC2 via SSH..."
-      
+
       # FIXED: The docker run command is now on a SINGLE LINE to prevent SSH syntax errors.
-      - ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@$EC2_IP_ADDRESS "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com && docker pull $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$IMAGE_REPO_NAME:latest && docker stop multi-container-service || true && docker rm multi-container-service || true && docker run -d --name multi-container-service -p 80:8080 -e DB_URL_USER='jdbc:mysql://$DB_USER_URL:3306/userdb?createDatabaseIfNotExist=true' -e DB_USERNAME=$DB_USER_NAME -e DB_PASSWORD=$DB_USER_PASSWORD -e DB_URL_PRODUCT='jdbc:mysql://$DB_PRODUCT_URL:3306/productdb?createDatabaseIfNotExist=true' -e DB_USERNAME=$DB_USER_NAME -e DB_PASSWORD=$DB_USER_PASSWORD $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$IMAGE_REPO_NAME:latest"
+      - ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@$EC2_IP_ADDRESS "aws ecr get-login-password --region ap-south-2 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com && docker pull $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_NAME:latest && docker stop multi-container-service || true && docker rm multi-container-service || true && docker run -d --name multi-container-service -p 80:8080 -e DB_URL_USER='jdbc:mysql://$DB_USER_URL:3306/userdb?createDatabaseIfNotExist=true' -e DB_USERNAME=$DB_USER_NAME -e DB_PASSWORD=$DB_USER_PASSWORD -e DB_URL_PRODUCT='jdbc:mysql://$DB_PRODUCT_URL:3306/productdb?createDatabaseIfNotExist=true' -e DB_USERNAME=$DB_USER_NAME -e DB_PASSWORD=$DB_USER_PASSWORD $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_NAME:latest"
