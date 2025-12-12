@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  user-service:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/user-service-repo:latest
+    ports:
+      - "8081:8081"
+    environment:
+      DB_URL_USER: jdbc:mysql://${RDS_ENDPOINT}:3306/userdb?createDatabaseIfNotExist=true
+      DB_USER: ${RDS_USER}
+      DB_PASS: ${RDS_PASS}
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  product-service:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/product-service-repo:latest
+    ports:
+      - "8082:8082"
+    environment:
+      DB_URL_PRODUCT: jdbc:mysql://${RDS_ENDPOINT}:3306/productdb?createDatabaseIfNotExist=true
+      DB_USER: ${RDS_USER}
+      DB_PASS: ${RDS_PASS}
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  api-gateway:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/api-gateway-repo:latest
+    ports:
+      - "80:8080" # Map HTTP Port 80 directly to Gateway
+    depends_on:
+      - user-service
+      - product-service
+    deploy:
+      resources:
+        limits:
+          memory: 256m

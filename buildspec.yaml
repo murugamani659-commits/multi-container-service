@@ -7,28 +7,54 @@ phases:
 
   pre_build:
     commands:
-      - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region ap-south-2 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com
+      - echo Logging in to ECR...
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
 
       # Retrieve SSH Key securely
-      - echo "Retrieving SSH Key..."
-      - aws ssm get-parameter --name "/app/ecsec2-key" --with-decryption --query "Parameter.Value" --output text > key.pem
+      - echo Retrieving SSH Key...
+      - aws ssm get-parameter --name "/app/ec2-key" --with-decryption --query "Parameter.Value" --output text > key.pem
       - chmod 400 key.pem
 
   build:
     commands:
-      - echo Build started on `date`
-      - echo Building JAR...
-      - mvn clean package -DskipTests
-      - echo Building Docker Image...
-      - docker build -t $IMAGE_REPO_NAME:latest .
-      - docker tag $IMAGE_REPO_NAME:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_NAME:latest
+      # --- USER SERVICE ---
+      - echo Building User Service...
+      - cd user-service && mvn clean package -DskipTests
+      - docker build -t user-service-repo .
+      - docker tag user-service-repo:latest $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/user-service-repo:latest
+      - cd ..
+
+      # --- PRODUCT SERVICE ---
+      - echo Building Product Service...
+      - cd product-service && mvn clean package -DskipTests
+      - docker build -t product-service-repo .
+      - docker tag product-service-repo:latest $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/product-service-repo:latest
+      - cd ..
+
+      # --- API GATEWAY ---
+      - echo Building API Gateway...
+      - cd api-gateway && mvn clean package -DskipTests
+      - docker build -t api-gateway-repo .
+      - docker tag api-gateway-repo:latest $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/api-gateway-repo:latest
+      - cd ..
 
   post_build:
     commands:
-      - echo Pushing Image to ECR...
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_NAME:latest
-      - echo "Deploying to EC2 via SSH..."
+      - echo Pushing Images...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/user-service-repo:latest
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/product-service-repo:latest
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/api-gateway-repo:latest
 
-      # FIXED: The docker run command is now on a SINGLE LINE to prevent SSH syntax errors.
-      - ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@$EC2_IP_ADDRESS "aws ecr get-login-password --region ap-south-2 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com && docker pull $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_NAME:latest && docker stop multi-container-service || true && docker rm multi-container-service || true && docker run -d --name multi-container-service -p 80:8080 -e DB_URL_USER='jdbc:mysql://$DB_USER_URL:3306/userdb?createDatabaseIfNotExist=true' -e DB_USERNAME=$DB_USER_NAME -e DB_PASSWORD=$DB_USER_PASSWORD -e DB_URL_PRODUCT='jdbc:mysql://$DB_PRODUCT_URL:3306/productdb?createDatabaseIfNotExist=true' -e DB_USERNAME=$DB_USER_NAME -e DB_PASSWORD=$DB_USER_PASSWORD $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_NAME:latest"
+      - echo Deploying to EC2...
+      # Copy docker-compose file to EC2
+      - scp -o StrictHostKeyChecking=no -i key.pem docker-compose.prod.yml ec2-user@$EC2_IP_ADDRESS:/home/ec2-user/docker-compose.yml
+
+      # SSH in and run Docker Compose
+      - ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@$EC2_IP_ADDRESS "
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com &&
+        export AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID &&
+        export RDS_ENDPOINT=$DB_ENDPOINT &&
+        export RDS_USER=$DB_USER &&
+        export RDS_PASS=$DB_PASS &&
+        docker-compose down || true &&
+        docker-compose up -d"
