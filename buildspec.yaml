@@ -8,7 +8,7 @@ phases:
   pre_build:
     commands:
       - echo Logging in to ECR...
-      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+      - aws ecr get-login-password --region ap-south-2 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com
 
       # Retrieve SSH Key securely
       - echo Retrieving SSH Key...
@@ -20,30 +20,30 @@ phases:
       # --- USER SERVICE ---
       - echo Building User Service...
       - cd user-service && mvn clean package -DskipTests
-      - docker build -t user-service-repo .
-      - docker tag user-service-repo:latest $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/user-service-repo:latest
+      - docker build -t $IMAGE_REPO_USER .
+      - docker tag $IMAGE_REPO_USER:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_USER:latest
       - cd ..
 
       # --- PRODUCT SERVICE ---
       - echo Building Product Service...
       - cd product-service && mvn clean package -DskipTests
-      - docker build -t product-service-repo .
-      - docker tag product-service-repo:latest $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/product-service-repo:latest
+      - docker build -t $IMAGE_REPO_PRODUCT .
+      - docker tag $IMAGE_REPO_PRODUCT:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_PRODUCT:latest
       - cd ..
 
       # --- API GATEWAY ---
       - echo Building API Gateway...
       - cd api-gateway && mvn clean package -DskipTests
-      - docker build -t api-gateway-repo .
-      - docker tag api-gateway-repo:latest $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/api-gateway-repo:latest
+      - docker build -t $IMAGE_REPO_API .
+      - docker tag $IMAGE_REPO_API:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_API:latest
       - cd ..
 
   post_build:
     commands:
       - echo Pushing Images...
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/user-service-repo:latest
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/product-service-repo:latest
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/api-gateway-repo:latest
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_USER:latest
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_PRODUCT:latest
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com/$IMAGE_REPO_API:latest
 
       - echo Deploying to EC2...
       # Copy docker-compose file to EC2
@@ -51,7 +51,7 @@ phases:
 
       # SSH in and run Docker Compose
       - ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@$EC2_IP_ADDRESS "
-        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com &&
+        aws ecr get-login-password --region ap-south-2 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.ap-south-2.amazonaws.com &&
         export AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID &&
         export RDS_ENDPOINT=$DB_ENDPOINT &&
         export RDS_USER=$DB_USER &&
