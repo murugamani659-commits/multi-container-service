@@ -15,7 +15,7 @@ FROM amazoncorretto:21-alpine
 
 # Set working directory
 WORKDIR /app
-1
+
 # Copy Maven build output (JAR file) into container
 COPY /target/*.jar app.jar
 
