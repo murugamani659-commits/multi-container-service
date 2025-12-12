@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   user-service:
-    image: ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/user-service-repo:latest
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-2.amazonaws.com/user-service-repo:latest
     ports:
       - "8081:8081"
     environment:
@@ -15,7 +15,7 @@ services:
           memory: 256m
 
   product-service:
-    image: ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/product-service-repo:latest
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-2.amazonaws.com/product-service-repo:latest
     ports:
       - "8082:8082"
     environment:
@@ -28,7 +28,7 @@ services:
           memory: 256m
 
   api-gateway:
-    image: ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/api-gateway-repo:latest
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-2.amazonaws.com/api-gateway-repo:latest
     ports:
       - "80:8080" # Map HTTP Port 80 directly to Gateway
     depends_on:
