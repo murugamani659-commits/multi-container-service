@@ -15,7 +15,7 @@ FROM amazoncorretto:21-alpine
 WORKDIR /app
 1
 # Copy Maven build output (JAR file) into container
-COPY target/*.jar app.jar
+COPY /target/*.jar app.jar
 
 # Expose application port (adjust if needed)
 EXPOSE 8082
